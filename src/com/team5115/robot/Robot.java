@@ -73,6 +73,7 @@ public class Robot extends IterativeRobot {
 	public static SendableChooser teamChooser;
 	public static SendableChooser positionChooser;
 	public static SendableChooser actionChooser;
+	
 
 	// Initialization phase of the robot class
 	// This method runs once when the robot turns on and does not run again until the robot reboots
@@ -106,8 +107,6 @@ public class Robot extends IterativeRobot {
 		cm = new ClimberManager();
 		cam = new CameraManager();
 		sd = new SwitchDirection();
-
-		ad = new AutoDrive(5, 5, 20, 0, 0);
 		
 		// Initialize variables
 		xOffset = 0;
@@ -148,7 +147,7 @@ public class Robot extends IterativeRobot {
 		 * You could just give it a normal integer like 0 or 1, but this is nicer organizationally
 		 */
 		
-		ad.setState(AutoDrive.START);
+		
 		fuel.setState(FuelManipulatorManager.INTAKE);
 	}
 

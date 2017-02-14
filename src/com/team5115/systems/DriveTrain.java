@@ -4,11 +4,6 @@ import com.ctre.CANTalon;
 //import com.kauailabs.navx.frc.AHRS;
 import com.team5115.Constants;
 
-
-import edu.wpi.first.wpilibj.SerialPort;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
 public class DriveTrain {
 	
 	/**

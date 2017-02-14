@@ -13,11 +13,10 @@ public class PID {
 	
 	double error;
 	double last_error = 0;
-	double error_accum;
+	double error_accum = 0;
 	double derror;
 	double output;
 
-	//takes values and converts it into an output
 	public double getPID(double setpoint, double actual, double p, double i, double d) {
 		error = setpoint - actual;
 		// Calculation of the integral of the error
