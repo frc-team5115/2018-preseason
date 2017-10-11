@@ -1,22 +1,28 @@
+/*
+if(victory == FALSE) 
+	win;
+else 
+	win anyway;
+*/
+
 package com.team5115.robot;
 
 import com.team5115.Constants;
 import com.team5115.PID;
-import com.team5115.statemachines.AgitatorManager;
+import com.team5115.Prefs;
+import com.team5115.statemachines.AimGear;
+import com.team5115.statemachines.AimGearManager;
+import com.team5115.statemachines.Auto;
 import com.team5115.statemachines.AutoDrive;
 import com.team5115.statemachines.CameraManager;
 import com.team5115.statemachines.ClimberManager;
 import com.team5115.statemachines.Drive;
-import com.team5115.statemachines.FuelManipulatorManager;
-import com.team5115.statemachines.IntakeManager;
-import com.team5115.statemachines.FlywheelManager;
+import com.team5115.statemachines.TestThingManager;
 import com.team5115.statemachines.SwitchDirection;
-import com.team5115.systems.Agitator;
 import com.team5115.systems.Camera;
 import com.team5115.systems.Climber;
 import com.team5115.systems.DriveTrain;
-import com.team5115.systems.Intake;
-import com.team5115.systems.Flywheel;
+import com.team5115.systems.TestThing;
 
 import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.IterativeRobot;
@@ -25,7 +31,7 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
-public class Robot extends IterativeRobot {
+public class Roobit extends IterativeRobot {
 	
 /**
  * The Robot class handles the basic functions of the robot
@@ -34,7 +40,7 @@ public class Robot extends IterativeRobot {
  * Autonomous - Robot runs by itself
  * Teleop - Robot is controlled by the driver
  * Disabled - Robot is off 
- * (Note: if you have no clue as to what your doing, there is a Google slides presentation on the shared FRC files in your drive named "How To code" )
+ * (Note: If you have no clue as to what you're doing, there is a Google slides presentation on the shared FRC files in your drive named "How To code" )
  */
 	
 	/**
@@ -42,25 +48,28 @@ public class Robot extends IterativeRobot {
 	 * To define an object or variable, follow this format:
 	 * public static class name;
 	 * e.g. public static DriveTrain dt;
-	 * The name can be anything you want
-	 * Don't forget to end your code with a ;
+	 * class - The class of the object you are creating e.g. DriveTrain, int, double, etc.
+	 * name - Any name you want, but make it something meaningful like an acronym
+	 * Don't forget to end your lines with semicolons(;)
 	 */
 	
 	// Define subsystems
 	public static DriveTrain drivetrain;
-	public static Intake intake;
-	public static Flywheel flywheel;
-	public static Agitator agitator;
 	public static Climber climber;
 	public static Camera camera;
+	public static TestThing tt;
 	
 	// Define state machines
 	public static Drive hd;
-	public static FuelManipulatorManager fuel;
+	public static AimGearManager agm;
 	public static ClimberManager cm;
 	public static CameraManager cam;
 	public static SwitchDirection sd;
 	public static AutoDrive ad;
+	public static Auto auto;
+	public static AimGear ag;
+	public static TestThingManager ttm;
+	
 	
 	// Define other stuff
 	public static NetworkTable nt;
@@ -70,10 +79,9 @@ public class Robot extends IterativeRobot {
 	public static int team;
 	public static int action;
 	public static int position;
-	public static SendableChooser teamChooser;
-	public static SendableChooser positionChooser;
-	public static SendableChooser actionChooser;
-	
+	public static SendableChooser<Integer> teamChooser;
+	public static SendableChooser<Integer> positionChooser;
+	public static SendableChooser<Integer> actionChooser;
 
 	// Initialization phase of the robot class
 	// This method runs once when the robot turns on and does not run again until the robot reboots
@@ -95,15 +103,13 @@ public class Robot extends IterativeRobot {
 		
 		// Initialize subsystems
 		drivetrain = new DriveTrain();
-		intake = new Intake();
-		flywheel =  new Flywheel();
-		agitator = new Agitator();
+
 		climber = new Climber();
 		camera = new Camera();
 		
 		// Initialize state machines
 		hd = new Drive();
-		fuel = new FuelManipulatorManager();
+		agm = new AimGearManager();
 		cm = new ClimberManager();
 		cam = new CameraManager();
 		sd = new SwitchDirection();
@@ -111,13 +117,14 @@ public class Robot extends IterativeRobot {
 		// Initialize variables
 		xOffset = 0;
 		yOffset = 0;
+		gearOffset = 0;
 		
 		// Initialize network tables and SmartDashboard choosers for autonomous
 		nt = NetworkTable.getTable("pi");
     	nt.putNumber("rioStatus", 0);    	
-    	positionChooser = new SendableChooser();
-    	actionChooser = new SendableChooser();
-    	teamChooser = new SendableChooser();
+    	positionChooser = new SendableChooser<Integer>();
+    	actionChooser = new SendableChooser<Integer>();
+    	teamChooser = new SendableChooser<Integer>();
     	teamChooser.addDefault("Red", 1);
     	teamChooser.addObject("Blue", 2);
     	actionChooser.addDefault("Gear", 1);
@@ -135,9 +142,15 @@ public class Robot extends IterativeRobot {
 	// Initialize autonomous state machines here
 		
 		// Gets the selected values from the SmartDashboard
-//		team = (int) teamChooser.getSelected();
-//		position = (int) positionChooser.getSelected();
-//		action = (int) actionChooser.getSelected();
+		team = (int) teamChooser.getSelected();
+		position = (int) positionChooser.getSelected();
+		action = (int) actionChooser.getSelected();
+		
+		// Initializing auto state machine here because team, action, and position are only made in Auto Init
+		auto = new Auto(team, action, position);
+		ag = new AimGear();
+		
+		
 		
 		/**
 		 * To initialize a state machine, follow this format:
@@ -147,8 +160,9 @@ public class Robot extends IterativeRobot {
 		 * You could just give it a normal integer like 0 or 1, but this is nicer organizationally
 		 */
 		
+		auto.setState(Auto.INITIALIZE);
+		ag.setState(AimGear.START);
 		
-		fuel.setState(FuelManipulatorManager.INTAKE);
 	}
 
 	//Runs periodically while the game is in the autonomous phase
@@ -163,10 +177,8 @@ public class Robot extends IterativeRobot {
 		// Puts values onto the SmartDashboard
 		SmartDashboard.putNumber("X Offset", xOffset);
 		SmartDashboard.putNumber("Y Offset", yOffset);
-		SmartDashboard.putNumber("left accel", drivetrain.leftAcceleration());
-		SmartDashboard.putNumber("right accel", drivetrain.rightAcceleration());
-		SmartDashboard.putNumber("left speed", drivetrain.leftSpeed());
-		SmartDashboard.putNumber("right speed", drivetrain.rightSpeed());
+		SmartDashboard.putNumber("gearOffset", gearOffset);
+		
 		
 		/**
 		 * Updating the state machine runs all of the stuff in it
@@ -176,8 +188,13 @@ public class Robot extends IterativeRobot {
 		 */
 		
 		// Update state machines here
-		ad.update();
-		fuel.update();
+		auto.update();
+		//ag.update();
+		//af.update();
+	
+		
+//		SmartDashboard.putNumber("Left Speed", drivetrain.leftSpeed());
+//		SmartDashboard.putNumber("Right Speed", drivetrain.rightSpeed());
 		
 		Timer.delay(Constants.DELAY);
 	}
@@ -185,26 +202,36 @@ public class Robot extends IterativeRobot {
 	// Runs once when the game enters the driver operated stage
 	public void teleopInit() {
 	// Initialize state machines here for teleop
-		
 		hd.setState(Drive.DRIVING);
-		fuel.setState(FuelManipulatorManager.INTAKE);
+		agm.setState(AimGearManager.DRIVING);
 		cm.setState(ClimberManager.STOP);
-		cam.setState(CameraManager.INTAKE);
-
+		ttm.setState(TestThingManager.MOTOROFF);
+		drivetrain.inuse = false;
 	}
 
 	// Runs periodically when the game is in the driver operated stage
 	public void teleopPeriodic() {
+		// Gets values from the raspberry pi
+		nt.putNumber("riostatus", 1);
+		xOffset = nt.getNumber("xOffset", 5);
+		yOffset = nt.getNumber("yOffset", 5);
+		gearOffset = nt.getNumber("gearOffset", 0);
+		
+		// Puts values onto the SmartDashboard
+		SmartDashboard.putNumber("X Offset", xOffset);
+		SmartDashboard.putNumber("Y Offset", yOffset);
+		SmartDashboard.putNumber("gearOffset", gearOffset);
+//		System.out.println("X offset: " + xOffset);
+//		System.out.println("Y offset: " + yOffset);
 		
 		// Put update commands for state machines here
 		hd.update();
-		fuel.update();
+		agm.update();
 		cm.update();
 		cam.update();
 		sd.update();
-
-		Timer.delay(Constants.DELAY);		
-		SmartDashboard.putString("Direction", drivetrain.direction == Constants.DIR_ARM ? "ARM" : "BALL");
+		
+		Timer.delay(Constants.DELAY);
 		
 	}
 	
@@ -212,7 +239,6 @@ public class Robot extends IterativeRobot {
 	public void disabledInit() {
 	// Set all state machines that run during teleop to the off state
 		hd.setState(Drive.STOP);
-		fuel.setState(FuelManipulatorManager.STOP);
 	}
 
 	// Runs periodically while the robot is disabled
@@ -223,7 +249,7 @@ public class Robot extends IterativeRobot {
 }
 
 // This year's code brought to you by:
-// Rohan and Takeshi
+// Rohan and Takeshi and Abraham
 
                                                                                                                                                              
                                            //..``               `'#@@@@@@@+`                                                                                                                  
@@ -248,11 +274,11 @@ public class Robot extends IterativeRobot {
                  //;@           +.    #   @@    #@@@@@@@@@               ,@ :@@@@@@@@@@           @.            @:      #,    .#   ;@`   @@    @        @                                  
                 //`@#           @    @   ;@    @@@@@@@@:#@@               @ @@@@@@@@@@@:          @#            @`      ;;     @    @    #@    @        @                                  
                  //@;          ,         @`   ,@@@@@@ `  #@               @:@@@@@@   ;@@          @@            @       ,'     @    @    '#    @        @                                  
-                 //@,          ;        @@    @@@@@@+    .@               @#@@@@@     @@          @#            @`      `@    @@    @    ;@    @        @,     `                           
-                 //@                    @     @@@@@@`    '@.              @#@@@@#`    @'          @#            @'       @@, #@@`   @,   .@    @        #@@@@@@@@@@@@:                     
-                 //@                   @+     @@@@@@,    @@               @+@@@@@    #@           @;          '@@@        +@@@`@'   #;`   ``   '                    #@@@                   
-                //;@,                  @      @@@@@@@#+@@@@              ;@:@@@@@@@@@@@           @          @@,                `                                      @@@                 
-              //#@@@`               '@@;      @@@@@@@@@@@@,              @, @@@@@@@@@@;          :@        :@@                                                          .@@                
+                 //@,          ;        @@    @@@@@@+    .@               @ #@@@@@    @@         @#            @`      `@    @@    @    ;@    @        @,     `                           
+                 //@                    @     @@@@@@`    '@.              @ #@@@@#`    @'         @#            @'       @@, #@@`   @,   .@    @        #@@@@@@@@@@@@:                     
+                 //@                   @+     @@@@@@,    @@               @+@@@@@     #@          @;          '@@@        +@@@`@'   #;`   ``   '                    #@@@                   
+                //;@,                  @      @@@@@@@#+@@@@              ;@:@@@@@@@@@@@#          @          @@,                `                                      @@@                 
+              //#@@@`               '@@;      @@@@@@@@@@@@,              @, @@@@@@@@@@#          :@        :@@                                                          .@@                
              //;@#  @#             +@:         :@@@@@@@@@@#              .@  ;@@@@@@@@#           @+       ,@'`                                                            @@               
             //@@     +            '#            @@@@@@@@@,               @.   ;@@@@@@.           '@       .@'  `                                                            @@              
             //@+                   '@:   +        :@@@@@'                ##      ;+'             ;@        @#                                                                 @#             
